@@ -1,0 +1,25 @@
+{
+    "name": "toolkit-upgrader",
+    "private": false,
+    "license": "MIT",
+    "version": "0.0.1",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "rehype": "^13.0.1",
+        "unified": "^11.0.5",
+        "unist-util-visit": "^5.0.0",
+        "hast-util-select": "^6.0.2",
+        "hastscript": "^9.0.0",
+        "@sindresorhus/is": "^7.0.0"
+    },
+    "devDependencies": {
+        "typescript": "^5.5.3",
+        "vite": "^5.4.1",
+        "prettier": "^3.3.3"
+    }
+}
