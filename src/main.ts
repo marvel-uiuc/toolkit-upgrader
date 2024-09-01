@@ -9,11 +9,29 @@ addEventListener("load", () => {
         const existing = localStorage.getItem("source");
         if (existing) {
             source.value = existing;
+        } else {
+            source.value = `{% for card in some_template_variable %}
+<il-card class="il-theme-blue-gradient">
+<div class="il-icon">alumni</div>
+<h3>Student Life</h3>
+<p>Animal sciences students extend their learning and career networks beyond
+the classroom through internships, judging teams, student organizations, undergraduate research
+projects with our faculty, as well as short- and long-term study abroad opportunities all over the world. </p>
+<p class="il-buttons"><a href="#" class="il-button">Learn More</a><a href="#" class="il-button">Contact Us</a></p>
+</il-card>
+{% endfor %}
+
+<il-clickable-card href="https://www.example.com">
+<img src="https://picsum.photos/1920/1280" alt="" slot="image">
+<h3 slot="header">Student Life</h3>
+<p>Animal sciences students extend their learning and career networks beyond
+the classroom through internships, judging teams, student organizations, undergraduate research
+projects with our faculty, as well as short- and long-term study abroad opportunities all over the world. </p>
+</il-clickable-card>`;
         }
     } catch (err) {
         console.warn(err);
     }
-
 
     source.addEventListener("input", () => {
         try {
