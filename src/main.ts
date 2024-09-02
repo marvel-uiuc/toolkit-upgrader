@@ -22,7 +22,7 @@ projects with our faculty, as well as short- and long-term study abroad opportun
 {% endfor %}
 
 <il-clickable-card href="https://www.example.com">
-<img src="https://picsum.photos/1920/1280" alt="" slot="image">
+<img src="https://picsum.photos/1920/1280" alt="">
 <h3 slot="header">Student Life</h3>
 <p>Animal sciences students extend their learning and career networks beyond
 the classroom through internships, judging teams, student organizations, undergraduate research
