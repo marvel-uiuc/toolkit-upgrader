@@ -1,5 +1,49 @@
 export const classesToAttributes = [
     {
+        class: ["il-align-top", "il-align-left"],
+        attribute: "align",
+        value: "top-left"
+    },
+    {
+        class: ["il-align-top", "il-align-right"],
+        attribute: "align",
+        value: "top-right"
+    },
+    {
+        class: ["il-align-bottom", "il-align-left"],
+        attribute: "align",
+        value: "bottom-left"
+    },
+    {
+        class: ["il-align-bottom", "il-align-right"],
+        attribute: "align",
+        value: "bottom-right"
+    },    {
+        class: "il-align-top",
+        attribute: "align",
+        value: "top"
+    },
+    {
+        class: "il-align-right",
+        attribute: "align",
+        value: "right"
+    },
+    {
+        class: "il-align-bottom",
+        attribute: "align",
+        value: "bottom"
+    },
+    {
+        class: "il-align-left",
+        attribute: "align",
+        value: "left"
+    },
+    {
+        class: "il-align-center",
+        attribute: "align",
+        value: "center"
+    },
+    {
         class: "il-theme-blue",
         attribute: "theme",
         value: "blue",

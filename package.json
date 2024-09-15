@@ -16,7 +16,7 @@
         "hast-util-select": "^6.0.2",
         "hastscript": "^9.0.0",
         "@sindresorhus/is": "^7.0.0",
-        "remeda": "^2.11.0"
+        "rambdax": "^11.2.0"
     },
     "devDependencies": {
         "typescript": "^5.5.3",

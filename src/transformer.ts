@@ -8,7 +8,8 @@ import { Element } from "hast";
 import { components } from "./components.ts";
 import is from "@sindresorhus/is";
 import { classReplacements } from "./class-replacements.ts";
-import { unique } from "remeda";
+import { clone, contains, difference, remove, uniq } from "rambdax";
+import { attributeRenames } from "./attribute-renames.ts";
 
 /**
  * Transform uses of v2 toolkit components to v3.
@@ -31,13 +32,22 @@ export function transform(input: string): string {
             if (node.tagName.startsWith("il-")) {
                 let tagName = node.tagName.replace(/^il-/, "ilw-");
                 const convert = elementConvert.find(
-                    (it) => it.tagName === node.tagName,
+                    (it) =>
+                        it.tagName === node.tagName &&
+                        (!it.hasAttribute ||
+                            node.properties[it.hasAttribute] ||
+                            node.properties[it.hasAttribute] === ""),
                 );
 
                 // If there's a special convert rule, use that
                 if (convert) {
                     tagName = convert.component;
-                    node.tagName = convert.component;
+                    if (
+                        convert.removeAttribute &&
+                        (node.properties[convert.removeAttribute] || node.properties[convert.removeAttribute] === '')
+                    ) {
+                        delete node.properties[convert.removeAttribute];
+                    }
                     if (convert.attributes) {
                         for (let attr of convert.attributes) {
                             node.properties[attr.name] = attr.value;
@@ -53,12 +63,18 @@ export function transform(input: string): string {
                     replaceLines.push(node.position?.start.line);
                 }
 
+                if (processAttributeRenames(node)) {
+                    replaceLines.push(node.position?.start.line);
+                }
+
                 // Lastly, run special functions for additional conversions with
                 // certain components.
                 if (components[tagName]) {
                     let lines = components[tagName](node);
                     replaceLines.push(...lines);
                 }
+
+                node.tagName = tagName;
             } else {
                 // Even if it's not an il- element, there may be classes we
                 // need to replace.
@@ -84,12 +100,13 @@ export function transform(input: string): string {
             allowParseErrors: true,
             characterReferences: {
                 omitOptionalSemicolons: true,
-            }
+            },
         })
-        .stringify(tree).split("\n");
+        .stringify(tree)
+        .split("\n");
 
     // Only replace the lines we processed
-    for (let line of unique(replaceLines).filter(it => is.number(it))) {
+    for (let line of uniq(replaceLines).filter((it) => is.number(it))) {
         lines[line - 1] = converted[line - 1];
     }
 
@@ -99,7 +116,10 @@ export function transform(input: string): string {
     // includes most closing tags as well.
     for (let it of elementConvert) {
         console.log(`<(/?)${it.tagName}(\\W)`, `<$1${it.component}$2`);
-        result = result.replace(new RegExp(`<(/?)${it.tagName}(?=\\W)`, "g"), `<$1${it.component}`);
+        result = result.replace(
+            new RegExp(`<(/?)${it.tagName}(?=\\W)`, "g"),
+            `<$1${it.component}`,
+        );
     }
     result = result.replace(/<(\/?)il-/g, "<$1ilw-");
 
@@ -112,25 +132,48 @@ export function transform(input: string): string {
  * @param node The toolkit component node
  */
 function processClasses(node: Element) {
-    let className = node.properties["className"];
+    let className = clone(node.properties["className"]);
     let modified = false;
 
     if (is.array(className, is.string)) {
-        let newClasses: string[] = [];
-        for (let name of className) {
-            let attr = classesToAttributes.find((it) => it["class"] === name);
-            if (attr) {
-                node.properties[attr.attribute] = attr.value;
-                modified = true;
+        let names = className;
+        for (let it of classesToAttributes) {
+            if (Array.isArray(it.class)) {
+                let diff = difference(names, it.class);
+                if (names.length - diff.length === it.class.length) {
+                    names = diff;
+                    node.properties[it.attribute] = it.value;
+                    modified = true;
+                }
             } else {
-                newClasses.push(name);
+                if (names.includes(it.class)) {
+                    names = difference(names, [it.class]);
+                    node.properties[it.attribute] = it.value;
+                    modified = true;
+                }
             }
         }
-        if (newClasses.length > 0) {
-            node.properties["className"] = newClasses;
+        if (names.length > 0) {
+            node.properties["className"] = names;
         } else {
             delete node.properties["className"];
         }
     }
+    return modified;
+}
+
+function processAttributeRenames(node: Element) {
+    let modified = false;
+    for (let [key, val] of Object.entries(node.properties)) {
+        let rename = attributeRenames.find(
+            (it) => it.element === node.tagName && it.attribute === key,
+        );
+        if (rename) {
+            node.properties[rename.rename] = val;
+            delete node.properties[key];
+            modified = true;
+        }
+    }
+
     return modified;
 }
