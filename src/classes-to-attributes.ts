@@ -73,4 +73,24 @@ export const classesToAttributes = [
         attribute: "theme",
         value: "orange-gradient",
     },
+    {
+        class: "il-size-small",
+        attribute: "size",
+        value: "small"
+    },
+    {
+        class: "il-size-medium",
+        attribute: "size",
+        value: "medium"
+    },
+    {
+        class: "il-size-large",
+        attribute: "size",
+        value: "large"
+    },
+    {
+        class: "il-size-xlarge",
+        attribute: "size",
+        value: "x-large"
+    }
 ];

@@ -4,47 +4,68 @@ import rehypeStringify from "rehype-stringify";
 import { visit } from "unist-util-visit";
 import { classesToAttributes } from "./classes-to-attributes.ts";
 import { elementConvert } from "./element-convert.ts";
-import { Element } from "hast";
+import { Element, Root } from "hast";
 import { components } from "./components.ts";
 import is from "@sindresorhus/is";
 import { classReplacements } from "./class-replacements.ts";
 import { clone, contains, difference, remove, uniq } from "rambdax";
 import { attributeRenames } from "./attribute-renames.ts";
+import { select, selectAll } from "hast-util-select";
+import { h } from "hastscript";
+import { Note, Result } from "./Result.ts";
 
 /**
  * Transform uses of v2 toolkit components to v3.
  *
  * @param input HTML code with v2 components
  */
-export function transform(input: string): string {
+export function transform(input: string): {result: string, notes: Note[]} {
     /**
      * Track which lines have modifications.
      *
      * We'll only replace those lines to minimize unwanted side effects.
      */
     let replaceLines: (number | undefined)[] = [];
+    let results: Result[] = [];
+    let twigMode = false;
+
+    if (
+        (input.includes("{{") && input.includes("}}")) ||
+        (input.includes("{%") && input.includes("%}"))
+    ) {
+        let result = new Result()
+        result.addNote("This looks like a Twig template, the Upgrader may sometimes break template syntax.");
+        results.push(result);
+        twigMode = true;
+    }
 
     let lines = input.split("\n");
     const tree = unified().use(rehypeParse, { fragment: true }).parse(input);
 
     visit(tree, (node) => {
         if (node.type === "element") {
-            if (node.tagName.startsWith("il-")) {
+            const convert = elementConvert.find(
+                (it) =>
+                    (!it.tagName || it.tagName === node.tagName) &&
+                    (!it.className ||
+                        (is.array(node.properties.className, is.string) &&
+                            node.properties.className.includes(
+                                it.className,
+                            ))) &&
+                    (!it.hasAttribute ||
+                        node.properties[it.hasAttribute] ||
+                        node.properties[it.hasAttribute] === ""),
+            );
+            if (convert || node.tagName.startsWith("il-")) {
                 let tagName = node.tagName.replace(/^il-/, "ilw-");
-                const convert = elementConvert.find(
-                    (it) =>
-                        it.tagName === node.tagName &&
-                        (!it.hasAttribute ||
-                            node.properties[it.hasAttribute] ||
-                            node.properties[it.hasAttribute] === ""),
-                );
 
                 // If there's a special convert rule, use that
                 if (convert) {
                     tagName = convert.component;
                     if (
                         convert.removeAttribute &&
-                        (node.properties[convert.removeAttribute] || node.properties[convert.removeAttribute] === '')
+                        (node.properties[convert.removeAttribute] ||
+                            node.properties[convert.removeAttribute] === "")
                     ) {
                         delete node.properties[convert.removeAttribute];
                     }
@@ -52,6 +73,18 @@ export function transform(input: string): string {
                         for (let attr of convert.attributes) {
                             node.properties[attr.name] = attr.value;
                         }
+                    }
+                    if (
+                        convert.className &&
+                        is.array(node.properties.className, is.string)
+                    ) {
+                        node.properties.className.splice(
+                            node.properties.className.indexOf(
+                                convert.className,
+                            ),
+                            1,
+                        );
+                        replaceLines.push(node.position?.end.line);
                     }
                     // Only replace the start tag, the end tag will be replaced
                     // later. This is to help minimize any unwanted changes to
@@ -70,8 +103,11 @@ export function transform(input: string): string {
                 // Lastly, run special functions for additional conversions with
                 // certain components.
                 if (components[tagName]) {
-                    let lines = components[tagName](node);
-                    replaceLines.push(...lines);
+                    let result = components[tagName](node);
+                    results.push(result);
+                    if (result.tagName) {
+                        tagName = result.tagName;
+                    }
                 }
 
                 node.tagName = tagName;
@@ -83,6 +119,7 @@ export function transform(input: string): string {
                     for (let cn of classReplacements) {
                         let index = className.indexOf(cn.className);
                         if (index > -1) {
+                            console.log(cn);
                             className[index] = cn.replacement;
                             replaceLines.push(node.position?.start.line);
                         }
@@ -91,6 +128,10 @@ export function transform(input: string): string {
             }
         }
     });
+
+
+    fixButtonGroups(tree);
+    console.log("prefix", tree);
 
     // Get the processed HTML as an array of lines
     let converted = unified()
@@ -105,25 +146,41 @@ export function transform(input: string): string {
         .stringify(tree)
         .split("\n");
 
+    console.log("postfix", converted);
+
+    replaceLines = replaceLines.concat(results.flatMap((it) => it.lines));
+
     // Only replace the lines we processed
     for (let line of uniq(replaceLines).filter((it) => is.number(it))) {
         lines[line - 1] = converted[line - 1];
     }
 
-    let result = lines.join("\n");
+    let result: string;
+    if (twigMode) {
+        result = lines.join("\n");
+    } else {
+        result = converted.join("\n");
+    }
 
-    // Lastly, replace tag names in lines we didn't fully process, which
-    // includes most closing tags as well.
-    for (let it of elementConvert) {
-        console.log(`<(/?)${it.tagName}(\\W)`, `<$1${it.component}$2`);
-        result = result.replace(
-            new RegExp(`<(/?)${it.tagName}(?=\\W)`, "g"),
-            `<$1${it.component}`,
-        );
+    if (twigMode) {
+        // Lastly, replace tag names in lines we didn't fully process, which
+        // includes most closing tags as well.
+        for (let it of elementConvert) {
+            if (it.tagName?.startsWith("il-")) {
+                result = result.replace(
+                    new RegExp(`<(/?)${it.tagName}(?=\\W)`, "g"),
+                    `<$1${it.component}`,
+                );
+            }
+        }
     }
     result = result.replace(/<(\/?)il-/g, "<$1ilw-");
 
-    return result;
+
+    return {
+        result,
+        notes: results.flatMap(it => it.notes)
+    };
 }
 
 /**
@@ -176,4 +233,43 @@ function processAttributeRenames(node: Element) {
     }
 
     return modified;
+}
+
+function fixButtonGroups(tree: Root): (number | undefined)[] {
+    let containers = selectAll(":not(li):has(> .ilw-button)", tree);
+    let lines = [];
+
+    for (let container of containers) {
+        let buttons: Element[] = [];
+        for (let child of container.children) {
+            if (child.type === "element") {
+                let className = child.properties?.className;
+                if (
+                    is.array(className, is.string) &&
+                    className.includes("ilw-button")
+                ) {
+                    buttons.push(child);
+                } else {
+                    buttons = [];
+                    break;
+                }
+            } else if (child.type !== "text" || !/^(\s|\\n)*$/.test(child.value)) {
+                buttons = [];
+                break;
+            }
+        }
+        if (buttons.length > 1) {
+            container.tagName = "ul";
+            container.properties.className = ["ilw-buttons"];
+            container.children = buttons.map((it) => {
+                lines.push(it.position?.start?.line, it.position?.end?.line);
+                return h("li", it);
+            });
+            lines.push(
+                container.position?.start?.line,
+                container.position?.end?.line,
+            );
+        }
+    }
+    return lines;
 }

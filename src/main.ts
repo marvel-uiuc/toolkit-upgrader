@@ -4,6 +4,7 @@ import { transform } from "./transformer.ts";
 addEventListener("load", () => {
     const source = document.getElementById("source") as HTMLTextAreaElement;
     const result = document.getElementById("result") as HTMLTextAreaElement;
+    const notes = document.getElementById("notes") as HTMLDivElement;
 
     try {
         const existing = localStorage.getItem("source");
@@ -42,6 +43,16 @@ projects with our faculty, as well as short- and long-term study abroad opportun
     })
 
     document.getElementById("convert")?.addEventListener("click", () => {
-        result.value = transform(source.value);
+        let res = transform(source.value);
+        console.log(res);
+
+        result.value = res.result;
+
+        let els = res.notes.map(it => {
+            return `<div class="note"><span>Line ${it.line?.toString() || "-"}</span> <p>${it.message}</p></div>`;
+        }).join("\n");
+
+        console.log(els);
+        notes.innerHTML = els;
     });
 });

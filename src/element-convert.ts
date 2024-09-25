@@ -28,5 +28,48 @@ export const elementConvert = [
     {
         tagName: "il-breadcrumbs-page",
         component: "a",
+    },
+    {
+        tagName: "div",
+        className: "il-formatted",
+        component: "ilw-content"
+    },
+    {
+        className: "il-icon",
+        component: "ilw-icon"
+    },
+    {
+        className: "il-icon-line",
+        component: "ilw-icon",
+        attributes: [
+            {
+                name: "type",
+                value: "line"
+            }
+        ]
+    },
+    {
+        tagName: "il-introduction",
+        component: "ilw-content",
+        attributes: [
+            {
+                name: "mode",
+                value: "introduction"
+            }
+        ]
+    },
+    {
+        tagName: "il-lede",
+        component: "ilw-content",
+        attributes: [
+            {
+                name: "mode",
+                value: "lede"
+            }
+        ]
+    },
+    {
+        tagName: "il-vertical-tab",
+        component: "ilw-tabs"
     }
 ];
