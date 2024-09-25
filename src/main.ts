@@ -44,7 +44,6 @@ projects with our faculty, as well as short- and long-term study abroad opportun
 
     document.getElementById("convert")?.addEventListener("click", () => {
         let res = transform(source.value);
-        console.log(res);
 
         result.value = res.result;
 

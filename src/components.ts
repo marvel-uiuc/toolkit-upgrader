@@ -21,7 +21,6 @@ export const components: Record<string, (el: Element) => Result> = {
             delete heading.properties["slot"];
             result.addStartEnd(heading.position);
 
-            console.log(el);
             if (el.properties.href) {
                 const href = el.properties.href as string;
                 delete el.properties.href;
@@ -240,7 +239,6 @@ export const components: Record<string, (el: Element) => Result> = {
 
         result.addLines(el.position);
         result.tagName = "ilw-columns";
-        console.log(el, result);
 
         return result;
     },

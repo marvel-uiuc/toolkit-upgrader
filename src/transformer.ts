@@ -119,7 +119,6 @@ export function transform(input: string): {result: string, notes: Note[]} {
                     for (let cn of classReplacements) {
                         let index = className.indexOf(cn.className);
                         if (index > -1) {
-                            console.log(cn);
                             className[index] = cn.replacement;
                             replaceLines.push(node.position?.start.line);
                         }
@@ -131,7 +130,6 @@ export function transform(input: string): {result: string, notes: Note[]} {
 
 
     fixButtonGroups(tree);
-    console.log("prefix", tree);
 
     // Get the processed HTML as an array of lines
     let converted = unified()
@@ -146,7 +144,6 @@ export function transform(input: string): {result: string, notes: Note[]} {
         .stringify(tree)
         .split("\n");
 
-    console.log("postfix", converted);
 
     replaceLines = replaceLines.concat(results.flatMap((it) => it.lines));
 
